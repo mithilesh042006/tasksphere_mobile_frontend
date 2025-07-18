@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -31,6 +32,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
   List<User> _searchResults = [];
   bool _isLoading = false;
   bool _isSearching = false;
+  Timer? _searchTimer;
 
   @override
   void dispose() {
@@ -38,23 +40,37 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
     _descriptionController.dispose();
     _notesController.dispose();
     _receiverController.dispose();
+    _searchTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _searchUsers(String query) async {
+  void _searchUsers(String query) {
+    // Cancel previous timer
+    _searchTimer?.cancel();
+
     if (query.length < 2) {
       setState(() {
         _searchResults = [];
+        _isSearching = false;
       });
       return;
     }
 
+    // Set searching state immediately for better UX
     setState(() {
       _isSearching = true;
     });
 
+    // Debounce the search to avoid too many API calls
+    _searchTimer = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(query);
+    });
+  }
+
+  Future<void> _performSearch(String query) async {
     try {
       final users = await _authService.searchUsers(query);
+
       if (mounted) {
         setState(() {
           _searchResults = users;
@@ -64,8 +80,15 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
+          _searchResults = [];
           _isSearching = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to search users: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
       }
     }
   }
@@ -301,8 +324,9 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color:
-                      isSelected ? color.withOpacity(0.1) : Colors.transparent,
+                  color: isSelected
+                      ? color.withValues(alpha: 0.1)
+                      : Colors.transparent,
                   border: Border.all(
                     color: isSelected ? color : Colors.grey[300]!,
                     width: isSelected ? 2 : 1,
@@ -396,12 +420,26 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
             hintText: 'Type to search users...',
             prefixIcon: const Icon(Icons.search),
             suffixIcon: _isSearching
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                ? const Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
                   )
-                : null,
+                : _receiverController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _receiverController.clear();
+                            _searchResults = [];
+                            _selectedReceiver = null;
+                          });
+                        },
+                      )
+                    : null,
           ),
           onChanged: _searchUsers,
         ),
@@ -410,9 +448,10 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
+              border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -464,44 +503,71 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
             ),
           ),
         ],
-        if (_searchResults.isNotEmpty && _selectedReceiver == null) ...[
+        // Show dropdown when there are search results OR when typing (for testing)
+        if ((_searchResults.isNotEmpty ||
+                _receiverController.text.length >= 2) &&
+            _selectedReceiver == null) ...[
           const SizedBox(height: 8),
+          // Simple dropdown for testing
           Container(
             constraints: const BoxConstraints(maxHeight: 200),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
+              color: Colors.white,
+              border: Border.all(color: Colors.grey),
               borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: _searchResults.length,
-              itemBuilder: (context, index) {
-                final user = _searchResults[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppTheme.secondaryColor,
-                    child: Text(
-                      user.fullDisplayName.isNotEmpty
-                          ? user.fullDisplayName[0].toUpperCase()
-                          : 'U',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+            child: _searchResults.isNotEmpty
+                ? ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _searchResults.length,
+                    itemBuilder: (context, index) {
+                      final user = _searchResults[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          child: Text(user.fullDisplayName.isNotEmpty
+                              ? user.fullDisplayName[0].toUpperCase()
+                              : 'U'),
+                        ),
+                        title: Text(user.fullDisplayName),
+                        subtitle: Text('@${user.username} - ${user.userId}'),
+                        onTap: () {
+                          setState(() {
+                            _selectedReceiver = user;
+                            _receiverController.text = user.fullDisplayName;
+                            _searchResults = [];
+                          });
+                        },
+                      );
+                    },
+                  )
+                : Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        if (_isSearching) ...[
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 8),
+                          const Text('Searching users...'),
+                        ] else ...[
+                          const Icon(Icons.search,
+                              size: 48, color: Colors.grey),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Type to search for users\nQuery: "${_receiverController.text}"',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  title: Text(user.fullDisplayName),
-                  subtitle: Text('ID: ${user.userId}'),
-                  onTap: () {
-                    setState(() {
-                      _selectedReceiver = user;
-                      _receiverController.text = user.fullDisplayName;
-                      _searchResults = [];
-                    });
-                  },
-                );
-              },
-            ),
           ),
         ],
       ],

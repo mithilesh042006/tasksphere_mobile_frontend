@@ -13,6 +13,7 @@ import 'screens/profile/profile_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'services/auth_service.dart';
 import 'utils/theme.dart';
+import 'test_search_widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -92,6 +93,11 @@ final GoRouter _router = GoRouter(
       path: '/notifications',
       name: 'notifications',
       builder: (context, state) => const NotificationsScreen(),
+    ),
+    GoRoute(
+      path: '/test-search',
+      name: 'test-search',
+      builder: (context, state) => const TestSearchWidget(),
     ),
   ],
   redirect: (context, state) async {

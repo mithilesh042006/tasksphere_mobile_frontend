@@ -29,7 +29,7 @@ class AuthService {
 
       if (response.success && response.data != null) {
         final data = response.data as Map<String, dynamic>;
-        
+
         // Save tokens
         final tokens = data['tokens'] as Map<String, dynamic>;
         await ApiClient.saveTokens(
@@ -74,7 +74,7 @@ class AuthService {
 
       if (response.success && response.data != null) {
         final data = response.data as Map<String, dynamic>;
-        
+
         // Save tokens
         final tokens = data['tokens'] as Map<String, dynamic>;
         await ApiClient.saveTokens(
@@ -110,7 +110,7 @@ class AuthService {
   Future<bool> logout() async {
     try {
       final refreshToken = await ApiClient.getRefreshToken();
-      
+
       if (refreshToken != null) {
         await ApiClient.post('/api/auth/logout/', body: {
           'refresh_token': refreshToken,
@@ -120,7 +120,7 @@ class AuthService {
       // Clear local data
       await ApiClient.clearTokens();
       await _clearCurrentUser();
-      
+
       return true;
     } catch (e) {
       // Even if API call fails, clear local data
@@ -142,12 +142,12 @@ class AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userJson = prefs.getString(_userKey);
-      
+
       if (userJson != null) {
         final userData = json.decode(userJson) as Map<String, dynamic>;
         return User.fromJson(userData);
       }
-      
+
       return null;
     } catch (e) {
       return null;
@@ -158,13 +158,13 @@ class AuthService {
   Future<User?> fetchUserProfile() async {
     try {
       final response = await ApiClient.get('/api/auth/profile/');
-      
+
       if (response.success && response.data != null) {
         final user = User.fromJson(response.data as Map<String, dynamic>);
         await _saveCurrentUser(user);
         return user;
       }
-      
+
       return null;
     } catch (e) {
       return null;
@@ -181,7 +181,7 @@ class AuthService {
   }) async {
     try {
       final body = <String, dynamic>{};
-      
+
       if (email != null) body['email'] = email;
       if (displayName != null) body['display_name'] = displayName;
       if (bio != null) body['bio'] = bio;
@@ -193,7 +193,7 @@ class AuthService {
       if (response.success && response.data != null) {
         final user = User.fromJson(response.data as Map<String, dynamic>);
         await _saveCurrentUser(user);
-        
+
         return AuthResult(
           success: true,
           message: 'Profile updated successfully',
@@ -217,12 +217,27 @@ class AuthService {
   Future<List<User>> searchUsers(String query) async {
     try {
       final response = await ApiClient.get('/api/auth/search/?q=$query');
-      
+
       if (response.success && response.data != null) {
-        final List<dynamic> usersData = response.data as List<dynamic>;
-        return usersData.map((userData) => User.fromJson(userData as Map<String, dynamic>)).toList();
+        final data = response.data as Map<String, dynamic>;
+
+        // Handle paginated response
+        if (data.containsKey('results')) {
+          final List<dynamic> usersData = data['results'] as List<dynamic>;
+          return usersData
+              .map(
+                  (userData) => User.fromJson(userData as Map<String, dynamic>))
+              .toList();
+        } else {
+          // Fallback for direct array response
+          final List<dynamic> usersData = response.data as List<dynamic>;
+          return usersData
+              .map(
+                  (userData) => User.fromJson(userData as Map<String, dynamic>))
+              .toList();
+        }
       }
-      
+
       return [];
     } catch (e) {
       return [];

@@ -37,7 +37,7 @@ class User {
       isDiscoverable: json['is_discoverable'] as bool? ?? true,
       fullDisplayName: json['full_display_name'] as String,
       dateJoined: DateTime.parse(json['date_joined'] as String),
-      lastLogin: json['last_login'] != null 
+      lastLogin: json['last_login'] != null
           ? DateTime.parse(json['last_login'] as String)
           : null,
     );
