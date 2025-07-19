@@ -72,18 +72,23 @@ class Task {
   factory Task.fromJson(Map<String, dynamic> json) {
     return Task(
       id: json['id'] as int,
-      title: json['title'] as String,
+      title: json['title'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      priority: TaskPriority.fromString(json['priority'] as String),
-      status: TaskStatus.fromString(json['status'] as String),
-      dueDate: json['due_date'] != null 
+      priority:
+          TaskPriority.fromString(json['priority'] as String? ?? 'medium'),
+      status: TaskStatus.fromString(json['status'] as String? ?? 'pending'),
+      dueDate: json['due_date'] != null
           ? DateTime.parse(json['due_date'] as String)
           : null,
       sender: User.fromJson(json['sender'] as Map<String, dynamic>),
       receiver: User.fromJson(json['receiver'] as Map<String, dynamic>),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-      completedAt: json['completed_at'] != null 
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : DateTime.now(),
+      completedAt: json['completed_at'] != null
           ? DateTime.parse(json['completed_at'] as String)
           : null,
       isReminderSent: json['is_reminder_sent'] as bool? ?? false,

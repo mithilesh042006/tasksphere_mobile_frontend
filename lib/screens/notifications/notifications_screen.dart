@@ -37,40 +37,16 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   }
 
   Future<void> _loadNotifications() async {
-    print('🔔 Loading notifications...');
     setState(() {
       _isLoading = true;
     });
 
     try {
       // Load notifications and stats
-      print('🔔 Loading all notifications...');
       final allResult = await _notificationService.getNotifications();
-      print(
-          '🔔 All notifications result: success=${allResult.success}, count=${allResult.notifications.length}');
-
-      print('🔔 Loading unread notifications...');
       final unreadResult =
           await _notificationService.getNotifications(filter: 'unread');
-      print(
-          '🔔 Unread notifications result: success=${unreadResult.success}, count=${unreadResult.notifications.length}');
-
-      print('📊 Loading notification stats...');
       final stats = await _notificationService.getNotificationStats();
-      print('📊 Stats loaded: ${stats != null ? "success" : "failed"}');
-
-      if (allResult.notifications.isNotEmpty) {
-        print('📋 Notification details:');
-        for (var notif in allResult.notifications.take(3)) {
-          print(
-              '   - "${notif.title}": ${notif.message} (Read: ${notif.isRead})');
-        }
-      } else {
-        print('📭 No notifications found');
-        if (!allResult.success) {
-          print('❌ Notifications error: ${allResult.message}');
-        }
-      }
 
       if (mounted) {
         setState(() {
@@ -250,7 +226,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: _getNotificationColor(notification.notificationType)
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(

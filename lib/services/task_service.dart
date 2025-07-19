@@ -10,15 +10,15 @@ class TaskService {
     int pageSize = 20,
   }) async {
     try {
-      String endpoint = '/api/tasks/?page=$page&page_size=$pageSize';
+      String endpoint = '/api/tasks/?';
       
       if (filter != null) {
-        endpoint += '&filter=$filter';
+        endpoint += 'filter=$filter';
       }
       
-      if (status != null) {
-        endpoint += '&status=$status';
-      }
+      // if (status != null) {
+      //   endpoint += '&status=$status';
+      // }
 
       final response = await ApiClient.get(endpoint);
 

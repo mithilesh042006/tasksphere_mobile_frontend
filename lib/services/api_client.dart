@@ -45,12 +45,7 @@ class ApiClient {
       final url = Uri.parse('$baseUrl$endpoint');
       final headers = await _authHeaders;
 
-      print('🌐 GET $url');
-      print(
-          '🔑 Headers: ${headers.keys.contains('Authorization') ? 'Authenticated' : 'No auth'}');
-
       final response = await http.get(url, headers: headers);
-      print('📥 Response: ${response.statusCode}');
       return _handleResponse(response);
     } catch (e) {
       return ApiResponse(
