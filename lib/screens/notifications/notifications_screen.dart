@@ -43,10 +43,18 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
     try {
       // Load notifications and stats
+      print('NotificationsScreen: Loading notifications...');
       final allResult = await _notificationService.getNotifications();
+      print(
+          'NotificationsScreen: All notifications result: success=${allResult.success}, count=${allResult.notifications.length}');
+
       final unreadResult =
           await _notificationService.getNotifications(filter: 'unread');
+      print(
+          'NotificationsScreen: Unread notifications result: success=${unreadResult.success}, count=${unreadResult.notifications.length}');
+
       final stats = await _notificationService.getNotificationStats();
+      print('NotificationsScreen: Stats loaded: ${stats != null}');
 
       if (mounted) {
         setState(() {
@@ -55,6 +63,9 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           _stats = stats;
           _isLoading = false;
         });
+
+        print(
+            'NotificationsScreen: State updated - All: ${_allNotifications.length}, Unread: ${_unreadNotifications.length}');
       }
     } catch (e) {
       if (mounted) {

@@ -9,21 +9,29 @@ class NotificationService {
     int pageSize = 20,
   }) async {
     try {
-      String endpoint = '/api/notifications/?';
-      
+      String endpoint = '/api/notifications/';
+
       if (filter != null && filter != 'all') {
-        endpoint += '&filter=$filter';
+        endpoint += '?filter=$filter';
       }
 
+      print('NotificationService: Fetching notifications from $endpoint');
       final response = await ApiClient.get(endpoint);
+      print('NotificationService: Response status: ${response.success}');
 
       if (response.success && response.data != null) {
         final data = response.data as Map<String, dynamic>;
         final results = data['results'] as List<dynamic>;
-        
+
+        print('NotificationService: Found ${results.length} notifications');
+
         final notifications = results
-            .map((notificationData) => TaskSphereNotification.fromJson(notificationData as Map<String, dynamic>))
+            .map((notificationData) => TaskSphereNotification.fromJson(
+                notificationData as Map<String, dynamic>))
             .toList();
+
+        print(
+            'NotificationService: Successfully parsed ${notifications.length} notifications');
 
         return NotificationListResult(
           success: true,
@@ -51,10 +59,12 @@ class NotificationService {
   // Get notification details
   Future<NotificationResult> getNotification(int notificationId) async {
     try {
-      final response = await ApiClient.get('/api/notifications/$notificationId/');
+      final response =
+          await ApiClient.get('/api/notifications/$notificationId/');
 
       if (response.success && response.data != null) {
-        final notification = TaskSphereNotification.fromJson(response.data as Map<String, dynamic>);
+        final notification = TaskSphereNotification.fromJson(
+            response.data as Map<String, dynamic>);
         return NotificationResult(
           success: true,
           notification: notification,
@@ -76,12 +86,14 @@ class NotificationService {
   // Mark notification as read
   Future<NotificationResult> markAsRead(int notificationId) async {
     try {
-      final response = await ApiClient.patch('/api/notifications/$notificationId/', body: {
+      final response =
+          await ApiClient.patch('/api/notifications/$notificationId/', body: {
         'is_read': true,
       });
 
       if (response.success && response.data != null) {
-        final notification = TaskSphereNotification.fromJson(response.data as Map<String, dynamic>);
+        final notification = TaskSphereNotification.fromJson(
+            response.data as Map<String, dynamic>);
         return NotificationResult(
           success: true,
           message: 'Notification marked as read',
@@ -104,7 +116,8 @@ class NotificationService {
   // Mark all notifications as read
   Future<bool> markAllAsRead() async {
     try {
-      final response = await ApiClient.post('/api/notifications/mark-all-read/');
+      final response =
+          await ApiClient.post('/api/notifications/mark-all-read/');
       return response.success;
     } catch (e) {
       return false;
@@ -127,9 +140,10 @@ class NotificationService {
       final response = await ApiClient.get('/api/notifications/stats/');
 
       if (response.success && response.data != null) {
-        return NotificationStats.fromJson(response.data as Map<String, dynamic>);
+        return NotificationStats.fromJson(
+            response.data as Map<String, dynamic>);
       }
-      
+
       return null;
     } catch (e) {
       return null;
