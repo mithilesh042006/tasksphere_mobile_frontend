@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/task.dart';
 import '../utils/theme.dart';
+import '../../providers/user_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class TaskCard extends StatelessWidget {
+class TaskCard extends ConsumerStatefulWidget {
   final Task task;
   final VoidCallback? onTap;
   final Function(TaskStatus)? onStatusChanged;
@@ -16,11 +18,18 @@ class TaskCard extends StatelessWidget {
   });
 
   @override
+  ConsumerState<TaskCard> createState() => _TaskCardState();
+}
+
+class _TaskCardState extends ConsumerState<TaskCard> {
+  @override
   Widget build(BuildContext context) {
+    final userState = ref.watch(userProvider);
+    final user = userState.user;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -32,10 +41,10 @@ class TaskCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      task.title,
+                      widget.task.title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        decoration: task.status == TaskStatus.completed
+                        decoration: widget.task.status == TaskStatus.completed
                             ? TextDecoration.lineThrough
                             : null,
                       ),
@@ -48,10 +57,10 @@ class TaskCard extends StatelessWidget {
                 ],
               ),
               
-              if (task.description.isNotEmpty) ...[
+              if (widget.task.description.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
-                  task.description,
+                  widget.task.description,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.grey[600],
                   ),
@@ -70,18 +79,18 @@ class TaskCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   
                   // Due date
-                  if (task.dueDate != null) ...[
+                  if (widget.task.dueDate != null) ...[
                     Icon(
                       Icons.schedule,
                       size: 16,
-                      color: task.isOverdue ? AppTheme.errorColor : Colors.grey[600],
+                      color: widget.task.isOverdue ? AppTheme.errorColor : Colors.grey[600],
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      _formatDueDate(task.dueDate!),
+                      _formatDueDate(widget.task.dueDate!),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: task.isOverdue ? AppTheme.errorColor : Colors.grey[600],
-                        fontWeight: task.isOverdue ? FontWeight.w600 : null,
+                        color: widget.task.isOverdue ? AppTheme.errorColor : Colors.grey[600],
+                        fontWeight: widget.task.isOverdue ? FontWeight.w600 : null,
                       ),
                     ),
                     const Spacer(),
@@ -94,7 +103,7 @@ class TaskCard extends StatelessWidget {
               ),
               
               // Status change buttons (only for received tasks)
-              if (onStatusChanged != null && _canChangeStatus()) ...[
+              if (widget.onStatusChanged != null && _canChangeStatus() && user == widget.task.receiver) ...[
                 const SizedBox(height: 12),
                 _buildStatusButtons(),
               ],
@@ -106,7 +115,7 @@ class TaskCard extends StatelessWidget {
   }
 
   Widget _buildPriorityChip() {
-    final color = AppTheme.getPriorityColor(task.priority.value);
+    final color = AppTheme.getPriorityColor(widget.task.priority.value);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -115,7 +124,7 @@ class TaskCard extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(
-        task.priority.label,
+        widget.task.priority.label,
         style: TextStyle(
           color: color,
           fontSize: 12,
@@ -126,7 +135,7 @@ class TaskCard extends StatelessWidget {
   }
 
   Widget _buildStatusChip() {
-    final color = AppTheme.getStatusColor(task.status.value);
+    final color = AppTheme.getStatusColor(widget.task.status.value);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -135,7 +144,7 @@ class TaskCard extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(
-        task.status.label,
+        widget.task.status.label,
         style: TextStyle(
           color: color,
           fontSize: 12,
@@ -153,8 +162,8 @@ class TaskCard extends StatelessWidget {
           radius: 12,
           backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
           child: Text(
-            task.sender.fullDisplayName.isNotEmpty
-                ? task.sender.fullDisplayName[0].toUpperCase()
+            widget.task.sender.fullDisplayName.isNotEmpty
+                ? widget.task.sender.fullDisplayName[0].toUpperCase()
                 : 'U',
             style: const TextStyle(
               fontSize: 10,
@@ -174,8 +183,8 @@ class TaskCard extends StatelessWidget {
           radius: 12,
           backgroundColor: AppTheme.secondaryColor.withOpacity(0.1),
           child: Text(
-            task.receiver.fullDisplayName.isNotEmpty
-                ? task.receiver.fullDisplayName[0].toUpperCase()
+            widget.task.receiver.fullDisplayName.isNotEmpty
+                ? widget.task.receiver.fullDisplayName[0].toUpperCase()
                 : 'U',
             style: const TextStyle(
               fontSize: 10,
@@ -191,10 +200,10 @@ class TaskCard extends StatelessWidget {
   Widget _buildStatusButtons() {
     return Row(
       children: [
-        if (task.status == TaskStatus.pending) ...[
+        if (widget.task.status == TaskStatus.pending) ...[
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () => onStatusChanged!(TaskStatus.inProgress),
+              onPressed: () => widget.onStatusChanged!(TaskStatus.inProgress),
               icon: const Icon(Icons.play_arrow, size: 16),
               label: const Text('Start'),
               style: OutlinedButton.styleFrom(
@@ -206,7 +215,7 @@ class TaskCard extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () => onStatusChanged!(TaskStatus.completed),
+              onPressed: () => widget.onStatusChanged!(TaskStatus.completed),
               icon: const Icon(Icons.check, size: 16),
               label: const Text('Complete'),
               style: ElevatedButton.styleFrom(
@@ -215,10 +224,10 @@ class TaskCard extends StatelessWidget {
               ),
             ),
           ),
-        ] else if (task.status == TaskStatus.inProgress) ...[
+        ] else if (widget.task.status == TaskStatus.inProgress) ...[
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () => onStatusChanged!(TaskStatus.completed),
+              onPressed: () => widget.onStatusChanged!(TaskStatus.completed),
               icon: const Icon(Icons.check, size: 16),
               label: const Text('Complete'),
               style: ElevatedButton.styleFrom(
@@ -233,7 +242,7 @@ class TaskCard extends StatelessWidget {
   }
 
   bool _canChangeStatus() {
-    return task.status != TaskStatus.completed && task.status != TaskStatus.cancelled;
+    return widget.task.status != TaskStatus.completed && widget.task.status != TaskStatus.cancelled;
   }
 
   String _formatDueDate(DateTime dueDate) {

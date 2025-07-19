@@ -1,51 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../services/auth_service.dart';
-import '../../models/user.dart';
+import '../../providers/user_provider.dart';
+
 import '../../utils/theme.dart';
 import '../../widgets/bottom_navigation.dart';
+import '../../widgets/user_info_widget.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  final _authService = AuthService();
-  User? _currentUser;
-  bool _isLoading = true;
-
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
-  }
-
-  Future<void> _loadUserProfile() async {
-    setState(() {
-      _isLoading = true;
+    // Refresh user data when profile screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(userProvider.notifier).refreshUser();
     });
-
-    try {
-      _currentUser = await _authService.getCurrentUser();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load profile: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
   }
 
   Future<void> _logout() async {
@@ -68,7 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirmed == true) {
-      await _authService.logout();
+      await ref.read(userProvider.notifier).logout();
       if (mounted) {
         context.go('/login');
       }
@@ -77,6 +53,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userState = ref.watch(userProvider);
+    final user = userState.user;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
@@ -87,122 +66,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: _isLoading
+      body: userState.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _currentUser == null
+          : user == null
               ? const Center(child: Text('No user data available'))
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // Profile Header
+                      // Profile Header using UserInfoWidget
+                      UserInfoWidget(
+                        showFullInfo: true,
+                        onTap: () {
+                          // TODO: Navigate to edit profile
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  Text('Edit profile feature coming soon!'),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // User Details Card
                       Card(
                         child: Padding(
-                          padding: const EdgeInsets.all(24),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              CircleAvatar(
-                                radius: 50,
-                                backgroundColor: AppTheme.primaryColor,
-                                child: Text(
-                                  _currentUser!.fullDisplayName.isNotEmpty
-                                      ? _currentUser!.fullDisplayName[0]
-                                          .toUpperCase()
-                                      : 'U',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              Text(
+                                'Account Details',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                               const SizedBox(height: 16),
-                              Text(
-                                _currentUser!.fullDisplayName,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                              _buildDetailRow(
+                                context,
+                                'Email',
+                                user.email,
+                                Icons.email,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '@${_currentUser!.username}',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.copyWith(
-                                      color: Colors.grey[600],
-                                    ),
+                              const SizedBox(height: 12),
+                              _buildDetailRow(
+                                context,
+                                'Username',
+                                '@${user.username}',
+                                Icons.person,
                               ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                      color: AppTheme.primaryColor
-                                          .withOpacity(0.3)),
-                                ),
-                                child: Text(
-                                  'ID: ${_currentUser!.userId}',
-                                  style: const TextStyle(
-                                    color: AppTheme.primaryColor,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                              const SizedBox(height: 12),
+                              _buildDetailRow(
+                                context,
+                                'User ID',
+                                user.userId,
+                                Icons.fingerprint,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildDetailRow(
+                                context,
+                                'Discoverable',
+                                user.isDiscoverable ? 'Yes' : 'No',
+                                user.isDiscoverable
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildDetailRow(
+                                context,
+                                'Member Since',
+                                _formatDate(user.dateJoined),
+                                Icons.calendar_today,
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
 
-                      // Profile Details
-                      Card(
-                        child: Column(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.email),
-                              title: const Text('Email'),
-                              subtitle: Text(_currentUser!.email),
-                            ),
-                            if (_currentUser!.bio.isNotEmpty)
-                              ListTile(
-                                leading: const Icon(Icons.info),
-                                title: const Text('Bio'),
-                                subtitle: Text(_currentUser!.bio),
-                              ),
-                            ListTile(
-                              leading: const Icon(Icons.visibility),
-                              title: const Text('Discoverable'),
-                              subtitle: Text(
-                                  _currentUser!.isDiscoverable ? 'Yes' : 'No'),
-                              trailing: Icon(
-                                _currentUser!.isDiscoverable
-                                    ? Icons.check_circle
-                                    : Icons.cancel,
-                                color: _currentUser!.isDiscoverable
-                                    ? AppTheme.successColor
-                                    : AppTheme.errorColor,
-                              ),
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.calendar_today),
-                              title: const Text('Member since'),
-                              subtitle: Text(
-                                '${_currentUser!.dateJoined.day}/${_currentUser!.dateJoined.month}/${_currentUser!.dateJoined.year}',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
 
-                      // Actions
+                      // Actions Card
                       Card(
                         child: Column(
                           children: [
@@ -214,11 +162,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 // TODO: Navigate to edit profile screen
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content:
-                                          Text('Edit Profile - Coming Soon')),
+                                    content: Text(
+                                        'Edit profile feature coming soon!'),
+                                  ),
                                 );
                               },
                             ),
+                            const Divider(height: 1),
                             ListTile(
                               leading: const Icon(Icons.settings),
                               title: const Text('Settings'),
@@ -227,28 +177,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 // TODO: Navigate to settings screen
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content: Text('Settings - Coming Soon')),
+                                    content:
+                                        Text('Settings feature coming soon!'),
+                                  ),
                                 );
                               },
                             ),
+                            const Divider(height: 1),
                             ListTile(
-                              leading: const Icon(Icons.help),
-                              title: const Text('Help & Support'),
-                              trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: () {
-                                // TODO: Navigate to help screen
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content:
-                                          Text('Help & Support - Coming Soon')),
-                                );
-                              },
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.logout,
+                              leading: Icon(Icons.logout,
                                   color: AppTheme.errorColor),
-                              title: const Text('Logout',
-                                  style: TextStyle(color: AppTheme.errorColor)),
+                              title: Text(
+                                'Logout',
+                                style: TextStyle(color: AppTheme.errorColor),
+                              ),
                               onTap: _logout,
                             ),
                           ],
@@ -259,5 +201,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
       bottomNavigationBar: const TaskSphereBottomNavigation(currentIndex: 3),
     );
+  }
+
+  Widget _buildDetailRow(
+      BuildContext context, String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: Theme.of(context).textTheme.bodySmall?.color,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).textTheme.bodySmall?.color,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }
