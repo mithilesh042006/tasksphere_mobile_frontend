@@ -39,15 +39,40 @@ class _TaskListScreenState extends State<TaskListScreen>
   }
 
   Future<void> _loadTasks() async {
+    print('🔄 Loading tasks...');
     setState(() {
       _isLoading = true;
     });
 
     try {
       // Load all tasks
+      print('📤 Loading all tasks...');
       final allResult = await _taskService.getTasks();
+      print(
+          '📤 All tasks result: success=${allResult.success}, count=${allResult.tasks.length}');
+
+      print('📤 Loading sent tasks...');
       final sentResult = await _taskService.getTasks(filter: 'sent');
+      print(
+          '📤 Sent tasks result: success=${sentResult.success}, count=${sentResult.tasks.length}');
+
+      print('📥 Loading received tasks...');
       final receivedResult = await _taskService.getTasks(filter: 'received');
+      print(
+          '📥 Received tasks result: success=${receivedResult.success}, count=${receivedResult.tasks.length}');
+
+      if (receivedResult.tasks.isNotEmpty) {
+        print('📋 Received tasks details:');
+        for (var task in receivedResult.tasks) {
+          print(
+              '   - "${task.title}" from ${task.sender.fullDisplayName} (Status: ${task.status.label})');
+        }
+      } else {
+        print('📭 No received tasks found');
+        if (!receivedResult.success) {
+          print('❌ Received tasks error: ${receivedResult.message}');
+        }
+      }
 
       if (mounted) {
         setState(() {

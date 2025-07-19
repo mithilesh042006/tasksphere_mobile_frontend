@@ -145,11 +145,16 @@ class AuthService {
 
       if (userJson != null) {
         final userData = json.decode(userJson) as Map<String, dynamic>;
-        return User.fromJson(userData);
+        final user = User.fromJson(userData);
+        print(
+            '👤 Current user: ${user.fullDisplayName} (@${user.username}) - ID: ${user.userId}');
+        return user;
       }
 
+      print('👤 No current user found');
       return null;
     } catch (e) {
+      print('❌ Error getting current user: $e');
       return null;
     }
   }
