@@ -43,16 +43,24 @@ class UserNotifier extends StateNotifier<UserState> {
 
     try {
       final user = await _authService.getCurrentUser();
+
+      // Always set loading to false, regardless of whether user was found
       state = state.copyWith(
-        user: user,
+        user: user, // This will be null if no user is stored, which is fine
         isLoading: false,
         error: null,
       );
+
+      // Debug logging to help track the issue
+      print(
+          'UserProvider: Loaded user from storage: ${user?.fullDisplayName ?? 'null'}');
     } catch (e) {
+      // Handle actual errors (not just "no user stored")
+      print('UserProvider: Error loading user from storage: $e');
       state = state.copyWith(
         user: null,
         isLoading: false,
-        error: e.toString(),
+        error: null, // Don't show error to user for storage issues
       );
     }
   }
@@ -73,6 +81,12 @@ class UserNotifier extends StateNotifier<UserState> {
           isLoading: false,
           error: null,
         );
+
+        print(
+            'UserProvider: Login successful for user: ${result.user!.fullDisplayName}');
+
+        // Ensure user is saved to storage (AuthService should handle this, but double-check)
+        await _ensureUserPersisted(result.user!);
         return true;
       } else {
         state = state.copyWith(
@@ -221,6 +235,11 @@ class UserNotifier extends StateNotifier<UserState> {
     state = state.copyWith(error: null);
   }
 
+  // Force reload user from storage (useful for debugging)
+  Future<void> reloadUserFromStorage() async {
+    await _loadCurrentUser();
+  }
+
   // Check if user is authenticated
   Future<bool> checkAuthentication() async {
     try {
@@ -232,6 +251,20 @@ class UserNotifier extends StateNotifier<UserState> {
       return isAuthenticated;
     } catch (e) {
       return false;
+    }
+  }
+
+  // Helper method to ensure user is persisted
+  Future<void> _ensureUserPersisted(User user) async {
+    try {
+      // Verify the user is actually saved by trying to load it
+      final savedUser = await _authService.getCurrentUser();
+      if (savedUser == null || savedUser.userId != user.userId) {
+        // User not properly saved, this shouldn't happen but let's log it
+        print('Warning: User not properly persisted after login');
+      }
+    } catch (e) {
+      print('Error checking user persistence: $e');
     }
   }
 }

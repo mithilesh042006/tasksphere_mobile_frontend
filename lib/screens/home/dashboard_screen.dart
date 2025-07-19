@@ -105,6 +105,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ],
                 ),
               ),
+              // PopupMenuItem(
+              //   value: 'debug',
+              //   child: const Row(
+              //     children: [
+              //       Icon(Icons.bug_report),
+              //       SizedBox(width: 8),
+              //       Text('Debug User State'),
+              //     ],
+              //   ),
+              // ),
               PopupMenuItem(
                 value: 'logout',
                 child: const Row(
@@ -120,6 +130,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               switch (value) {
                 case 'profile':
                   context.go('/profile');
+                  break;
+                case 'debug':
+                  context.go('/debug-user');
                   break;
                 case 'logout':
                   _logout();
@@ -158,7 +171,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const TaskCreateScreen())),
+        onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const TaskCreateScreen())),
         backgroundColor: AppTheme.primaryColor,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -297,7 +311,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 'Create Task',
                 Icons.add_task,
                 AppTheme.primaryColor,
-                () => context.go('/tasks/create'),
+                 () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const TaskCreateScreen())),
               ),
             ),
             const SizedBox(width: 12),

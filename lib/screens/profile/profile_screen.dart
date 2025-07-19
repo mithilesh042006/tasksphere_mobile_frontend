@@ -15,14 +15,14 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Refresh user data when profile screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(userProvider.notifier).refreshUser();
-    });
-  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   // Refresh user data when profile screen loads
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     ref.read(userProvider.notifier).refreshUser();
+  //   });
+  // }
 
   Future<void> _logout() async {
     final confirmed = await showDialog<bool>(

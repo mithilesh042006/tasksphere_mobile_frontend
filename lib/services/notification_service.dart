@@ -9,7 +9,7 @@ class NotificationService {
     int pageSize = 20,
   }) async {
     try {
-      String endpoint = '/api/notifications/?page=$page&page_size=$pageSize';
+      String endpoint = '/api/notifications/?';
       
       if (filter != null && filter != 'all') {
         endpoint += '&filter=$filter';
